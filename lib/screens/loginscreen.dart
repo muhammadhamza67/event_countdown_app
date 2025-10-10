@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'create_account_screen.dart'; // 👈 Make sure this file exists in your screens folder
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -142,7 +143,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // 🚪 Login Button (Same as Get Started)
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // TODO: Handle login action
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFA961C3),
                           padding: const EdgeInsets.symmetric(
@@ -160,7 +163,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 25),
+
+                      // 🟪 Go to Create Account
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text("Don't have an account? "),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const CreateAccountScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Sign up",
+                              style: TextStyle(
+                                color: Color(0xFFA961C3),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 40),
 
                       // Divider
                       SizedBox(
