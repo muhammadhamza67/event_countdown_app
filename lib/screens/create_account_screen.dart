@@ -33,7 +33,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     // ✅ Navigate to Home Dashboard directly (no routes)
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const HomeDashboard()),
+      MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
     );
   }
 

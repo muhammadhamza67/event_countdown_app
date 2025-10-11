@@ -1,6 +1,5 @@
 import 'package:event_countdown_app/screens/loginscreen.dart';
 import 'package:flutter/material.dart';
-// 👈 import login screen
 
 class EventCountdownScreen2 extends StatelessWidget {
   const EventCountdownScreen2({super.key});
@@ -8,7 +7,7 @@ class EventCountdownScreen2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF6FA), // cream
+      backgroundColor: const Color(0xFFFDF6FA), // off-cream background
       body: SafeArea(
         child: Center(
           child: Column(
@@ -52,60 +51,72 @@ class EventCountdownScreen2 extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: SizedBox(
-                  width: 220,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // 👇 Skip button (optional navigation)
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA961C3),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      "Skip",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ),
-                ),
-              ),
+
+              // Buttons Section
               Padding(
                 padding: const EdgeInsets.only(bottom: 40),
-                child: SizedBox(
-                  width: 220,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // 👇 Next button → Navigate to Login Screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
+                child: Column(
+                  children: [
+                    // Skip Button
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFA961C3), // purple
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
                         ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA961C3),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Skip",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      "Next",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    const SizedBox(height: 16),
+                    // Next Button
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFA961C3), // purple
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 40,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Next",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],
