@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "lastUpdated": "2025-10-13T10:00:00Z",
+  "events": [
+    {
+      "id": "evt-001",
+      "title": "Exam Deadline",
+      "description": "Math final exam",
+      "datetime": "2025-10-20T17:00:00Z",
+      "category": "Study",
+      "completed": false,
+      "notes": ""
+    },
+    {
+      "id": "evt-002",
+      "title": "Team Meeting",
+      "description": "Project sync",
+      "datetime": "2025-10-25T14:00:00Z",
+      "category": "Work",
+      "completed": false,
+      "notes": ""
+    }
+  ]
+}

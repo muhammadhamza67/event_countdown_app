@@ -18,78 +18,94 @@ class EventsListScreen extends StatelessWidget {
         case "Expired":
           return Colors.grey;
         case "Upcoming":
-          return Colors.purple;
+          return const Color(0xFFA961C3);
         default:
           return Colors.black;
       }
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Center(
-        child: Container(
-          width: 400,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
+      backgroundColor: const Color(0xFFFDF6FA),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFDF6FA),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'My Events',
+          style: TextStyle(
+            color: Color(0xFFA961C3),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
           ),
+        ),
+      ),
+
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "My Events",
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              // 🔍 Search Bar
+              TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search events...',
+                  hintStyle: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFFA961C3)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
 
+              // 📅 Events List
               Expanded(
                 child: ListView.separated(
                   itemCount: events.length,
-                  separatorBuilder: (_, __) => const Divider(height: 25),
+                  separatorBuilder: (_, __) => const Divider(height: 25, color: Colors.black12),
                   itemBuilder: (context, index) {
                     final e = events[index];
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Event Info
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               e["title"]!,
                               style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               e["date"]!,
                               style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
                                 color: Colors.black54,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ],
                         ),
+
+                        // Status
                         Text(
                           e["status"]!,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: getStatusColor(e["status"]!),
                           ),

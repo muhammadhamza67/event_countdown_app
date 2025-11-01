@@ -1,220 +1,200 @@
 import 'package:flutter/material.dart';
+import '../services/event_storage.dart';
+import '../models/event.dart';
+import 'edit_event_screen.dart';
+import 'add_event_screen.dart';
+import 'event_details_screen.dart';
+import 'events_list_screen.dart';
+import 'profile_preferences_screen.dart';
+import 'dart:async';
 
-// ✅ Import all your other screens
-import 'package:event_countdown_app/screens/edit_event_screen.dart';
-import 'package:event_countdown_app/screens/add_event_screen.dart';
-import 'package:event_countdown_app/screens/event_details_screen.dart';
-import 'package:event_countdown_app/screens/events_list_screen.dart';
-import 'package:event_countdown_app/screens/profile_preferences_screen.dart';
-
-class HomeDashboardScreen extends StatelessWidget {
+class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
+
+  @override
+  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+}
+
+class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+  int _selectedIndex = 0;
+  late Future<List<Event>> _eventsFuture;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _eventsFuture = _loadAndUpdateEvents();
+
+    // Refresh every minute to keep countdowns live
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      setState(() {
+        _eventsFuture = _loadAndUpdateEvents();
+      });
+    });
+  }
+
+  Future<List<Event>> _loadAndUpdateEvents() async {
+    final events = await EventStorage.loadEvents();
+    for (var e in events) {
+      final now = DateTime.now();
+      final target = DateTime.parse(e.dateTime); // assuming model has dateTime
+      final diff = target.difference(now);
+
+      // Remaining time
+      e.days = diff.inDays.toString();
+      e.hours = (diff.inHours % 24).toString();
+      e.minutes = (diff.inMinutes % 60).toString();
+
+      // Progress: 1 means complete, 0 means just started
+      final totalDuration = target.difference(e.createdAt ?? now);
+      if (totalDuration.inSeconds > 0) {
+        final progress =
+            1 - (diff.inSeconds / totalDuration.inSeconds).clamp(0.0, 1.0);
+        e.progressValue = progress;
+      } else {
+        e.progressValue = 1.0;
+      }
+    }
+    return events;
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  final List<Widget> _staticScreens = const [
+    AddEventScreen(),
+    EventsListScreen(),
+    EditEventScreen(),
+    EventDetailsScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF6FA), // 🌸 Soft background
+      backgroundColor: const Color(0xFFFDF6FA),
+      body: _selectedIndex == 0
+          ? DashboardView(eventsFuture: _eventsFuture)
+          : _staticScreens[_selectedIndex - 1],
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: const Color(0xFFFDF6FA),
+        selectedItemColor: const Color(0xFFA961C3),
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Add'),
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Events'),
+          BottomNavigationBarItem(icon: Icon(Icons.edit_calendar_outlined), label: 'Edit'),
+          BottomNavigationBarItem(icon: Icon(Icons.event_available_outlined), label: 'Details'),
+        ],
+      ),
+    );
+  }
+}
+
+class DashboardView extends StatelessWidget {
+  final Future<List<Event>> eventsFuture;
+  const DashboardView({super.key, required this.eventsFuture});
+
+  /// Dynamic progress color based on remaining time
+  Color _getProgressColor(double progressValue) {
+    if (progressValue <= 0.33) {
+      return Colors.green; // plenty of time left
+    } else if (progressValue <= 0.66) {
+      return Colors.orange; // medium time left
+    } else {
+      return Colors.red; // almost due
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDF6FA),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFDF6FA),
         elevation: 0,
-        title: const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            "Hello, Hamza",
-            style: TextStyle(
-              color: Color(0xFFA961C3),
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-              letterSpacing: 0.5,
-            ),
+        title: const Text(
+          "Hello, Hamza",
+          style: TextStyle(
+            color: Color(0xFFA961C3),
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            letterSpacing: 0.5,
           ),
         ),
         actions: [
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu, color: Color(0xFFA961C3)),
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: Color(0xFFA961C3)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePreferencesScreen()),
+              );
+            },
           ),
         ],
       ),
+      body: FutureBuilder<List<Event>>(
+        future: eventsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFFA961C3)));
+          } else if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("No events found."));
+          }
 
-      // 🟣 Drawer Menu
-      endDrawer: Drawer(
-        backgroundColor: const Color(0xFFFDF6FA),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Color(0xFFA961C3),
-              ),
-              child: Center(
-                child: Text(
-                  'Menu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+          final events = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              final event = events[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 25),
+                child: _buildEventCard(
+                  title: event.title,
+                  date: event.dateTime,
+                  days: event.days,
+                  hours: event.hours,
+                  minutes: event.minutes,
+                  progressValue: event.progressValue,
                 ),
-              ),
-            ),
-
-            // 🔹 Navigation Items
-            _drawerItem(
-              context,
-              "Add Event",
-              Icons.add_circle_outline,
-              const AddEventScreen(),
-            ),
-            _drawerItem(
-              context,
-              "Edit Event",
-              Icons.edit_calendar,
-              const EditEventScreen(),
-            ),
-            _drawerItem(
-              context,
-              "Event Details",
-              Icons.event_available,
-              const EventDetailsScreen(),
-            ),
-            _drawerItem(
-              context,
-              "Events List",
-              Icons.list_alt,
-              const EventsListScreen(),
-            ),
-            _drawerItem(
-              context,
-              "Profile Preferences",
-              Icons.person_outline,
-              const ProfilePreferencesScreen(),
-            ),
-          ],
-        ),
-      ),
-
-      // 🧱 Dashboard Body
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
-
-            // Event Cards
-            _buildEventCard(
-              title: "Exam Deadline",
-              date: "Tomorrow, August 13, 5:00 PM",
-              days: "02",
-              hours: "03",
-              minutes: "25",
-              color: Colors.green,
-              progressValue: 0.3,
-            ),
-            const SizedBox(height: 25),
-            _buildEventCard(
-              title: "Team Meeting",
-              date: "Monday, August 15, 5:00 PM",
-              days: "05",
-              hours: "07",
-              minutes: "40",
-              color: Colors.orange,
-              progressValue: 0.55,
-            ),
-            const SizedBox(height: 25),
-            _buildEventCard(
-              title: "Project Presentation",
-              date: "Friday, August 25, 2:00 PM",
-              days: "15",
-              hours: "17",
-              minutes: "30",
-              color: Colors.red,
-              progressValue: 0.75,
-            ),
-
-            const Spacer(),
-
-            // ➕ Add Event Button
-            Center(
-              child: FloatingActionButton(
-                backgroundColor: const Color(0xFFA961C3),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const AddEventScreen()),
-                  );
-                },
-                child: const Icon(Icons.add, size: 30, color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 25),
-          ],
-        ),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  // 🔹 Drawer Item Widget
-  static ListTile _drawerItem(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Widget destination,
-  ) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFFA961C3)),
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: Color(0xFFA961C3),
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      onTap: () {
-        Navigator.pop(context); // close drawer
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => destination),
-        );
-      },
-    );
-  }
-
-  // 🔹 Event Card Widget
   Widget _buildEventCard({
     required String title,
     required String date,
     required String days,
     required String hours,
     required String minutes,
-    required Color color,
     required double progressValue,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        Text(
-          date,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.grey,
-          ),
-        ),
+        Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
+        Text(date, style: const TextStyle(fontSize: 13, color: Colors.grey)),
         const SizedBox(height: 6),
         Row(
           children: [
@@ -228,7 +208,7 @@ class HomeDashboardScreen extends StatelessWidget {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progressValue,
-          color: color,
+          color: _getProgressColor(progressValue), // ← dynamic color now
           backgroundColor: Colors.grey[300],
           minHeight: 10,
           borderRadius: BorderRadius.circular(10),
@@ -237,25 +217,12 @@ class HomeDashboardScreen extends StatelessWidget {
     );
   }
 
-  // 🔹 Countdown Box Widget
   Widget _buildTimeBox(String value, String label) {
     return Column(
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.grey,
-          ),
-        ),
+        Text(value,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black)),
+        Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey)),
       ],
     );
   }
