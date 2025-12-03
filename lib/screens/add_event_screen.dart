@@ -1,8 +1,13 @@
-import 'package:event_countdown_app/screens/homedashboard_screen.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../models/event.dart';
-import '../services/event_storage.dart';
+import 'package:event_countdown_app/screens/homedashboard_screen.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:path_provider/path_provider.dart';
+import '../services/event_storage.dart';
+import '../models/event.dart';
 
 class AddEventScreen extends StatefulWidget {
   const AddEventScreen({super.key});
@@ -14,25 +19,37 @@ class AddEventScreen extends StatefulWidget {
 class _AddEventScreenState extends State<AddEventScreen> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
   String? selectedCategory;
   final List<String> categories = ['Work', 'Study', 'Personal', 'Other'];
 
-  // 🎤 Speech-to-text
   late stt.SpeechToText _speech;
   bool _isListening = false;
+
+  FlutterSoundRecorder? _recorder;
+  bool _isRecording = false;
+  String? _voicePath;
 
   @override
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
+    _recorder = FlutterSoundRecorder();
+    _initRecorder();
+  }
+
+  Future<void> _initRecorder() async {
+    await Permission.microphone.request();
+    await _recorder!.openRecorder();
   }
 
   @override
   void dispose() {
     titleController.dispose();
     descriptionController.dispose();
+    _recorder!.closeRecorder();
     super.dispose();
   }
 
@@ -54,6 +71,114 @@ class _AddEventScreenState extends State<AddEventScreen> {
       _speech.stop();
     }
   }
+
+  Future<void> _recordVoice() async {
+    if (_isRecording) {
+      await _recorder!.stopRecorder();
+      setState(() => _isRecording = false);
+    } else {
+      final dir = await getApplicationDocumentsDirectory();
+      _voicePath =
+          '${dir.path}/event_${DateTime.now().millisecondsSinceEpoch}.aac';
+      await _recorder!.startRecorder(toFile: _voicePath);
+      setState(() => _isRecording = true);
+    }
+  }
+
+  Future<void> _saveEvent() async {
+    if (titleController.text.isEmpty || selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
+
+    final combinedDateTime = DateTime(
+      selectedDate!.year,
+      selectedDate!.month,
+      selectedDate!.day,
+      selectedTime?.hour ?? 0,
+      selectedTime?.minute ?? 0,
+    );
+
+    final event = Event(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: titleController.text,
+      description: descriptionController.text,
+      dateTime: combinedDateTime,
+      days: '0',
+      hours: '0',
+      minutes: '0',
+      color: 'purple',
+      progressValue: 0.0,
+      completed: false,
+      notes: '',
+      category: selectedCategory ?? 'Other',
+      voicePath: _voicePath,
+      createdAt: DateTime.now(),
+    );
+
+    try {
+      await EventStorage.addEvent(event);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event saved successfully!')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving event: $e')),
+      );
+    }
+  }
+
+  Widget _buildLabel(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      );
+
+  InputDecoration _inputDecoration(String hint) => InputDecoration(
+        hintText: hint,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFA961C3)),
+        ),
+      );
+
+  Widget _buildButton({
+    required String text,
+    required Color color,
+    required Color textColor,
+    required VoidCallback onTap,
+  }) =>
+      ElevatedButton(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 15),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(color: textColor, fontSize: 16),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +214,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
                       controller: titleController,
                       decoration: InputDecoration(
                         hintText: 'Exams Deadline',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.grey.shade400),
@@ -184,6 +310,19 @@ class _AddEventScreenState extends State<AddEventScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: _recordVoice,
+                        icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+                        label: Text(_isRecording ? 'Stop Recording' : 'Record Voice'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFA961C3),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -214,95 +353,4 @@ class _AddEventScreenState extends State<AddEventScreen> {
       ),
     );
   }
-
-  Future<void> _saveEvent() async {
-    if (titleController.text.isEmpty || selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
-      return;
-    }
-
-    final combinedDateTime = DateTime(
-      selectedDate!.year,
-      selectedDate!.month,
-      selectedDate!.day,
-      selectedTime?.hour ?? 0,
-      selectedTime?.minute ?? 0,
-    );
-
-    final newEvent = Event(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: titleController.text,
-      description: descriptionController.text,
-      dateTime: combinedDateTime.toIso8601String(),
-      days: "0",
-      hours: "0",
-      minutes: "0",
-      color: "purple",
-      progressValue: 0.0,
-      createdAt: DateTime.now(),
-      category: selectedCategory ?? 'Other',
-      completed: false,
-      notes: '',
-      voicePath: '', // no separate voice field now
-    );
-
-    final events = await EventStorage.loadEvents();
-    events.add(newEvent);
-    await EventStorage.saveEvents(events);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Event saved successfully!')),
-    );
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
-    );
-  }
-
-  Widget _buildLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Colors.grey,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-
-  InputDecoration _inputDecoration(String hint) => InputDecoration(
-        hintText: hint,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade400),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFA961C3)),
-        ),
-      );
-
-  Widget _buildButton({
-    required String text,
-    required Color color,
-    required Color textColor,
-    required VoidCallback onTap,
-  }) =>
-      ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 15),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(color: textColor, fontSize: 16),
-        ),
-      );
 }

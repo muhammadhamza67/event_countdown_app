@@ -37,7 +37,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     final events = await EventStorage.loadEvents();
     for (var e in events) {
       final now = DateTime.now();
-      final target = DateTime.parse(e.dateTime); // assuming model has dateTime
+      final target = e.dateTime;
       final diff = target.difference(now);
 
       // Remaining time
@@ -46,7 +46,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       e.minutes = (diff.inMinutes % 60).toString();
 
       // Progress: 1 means complete, 0 means just started
-      final totalDuration = target.difference(e.createdAt ?? now);
+      final totalDuration = target.difference(e.createdAt);
       if (totalDuration.inSeconds > 0) {
         final progress =
             1 - (diff.inSeconds / totalDuration.inSeconds).clamp(0.0, 1.0);
@@ -183,7 +183,7 @@ class DashboardView extends StatelessWidget {
 
   Widget _buildEventCard({
     required String title,
-    required String date,
+    required DateTime date,
     required String days,
     required String hours,
     required String minutes,
@@ -194,7 +194,10 @@ class DashboardView extends StatelessWidget {
       children: [
         Text(title,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black)),
-        Text(date, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+        Text(
+          "${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2,'0')}",
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
         const SizedBox(height: 6),
         Row(
           children: [
@@ -208,7 +211,7 @@ class DashboardView extends StatelessWidget {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progressValue,
-          color: _getProgressColor(progressValue), // ← dynamic color now
+          color: _getProgressColor(progressValue),
           backgroundColor: Colors.grey[300],
           minHeight: 10,
           borderRadius: BorderRadius.circular(10),
